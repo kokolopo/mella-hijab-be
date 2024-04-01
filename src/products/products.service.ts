@@ -23,7 +23,12 @@ export class ProductsService {
   }
 
   async findAll() {
-    const data = await this.prisma.product.findMany();
+    const data = await this.prisma.product.findMany({
+      include: {
+        category: true,
+        variant: true,
+      },
+    });
 
     return { data };
   }

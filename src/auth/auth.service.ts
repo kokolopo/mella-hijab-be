@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { CreateUserDto } from './dto/createUser.dto';
+import { UserLoginDto } from './dto/userLogin.dto';
 
 @Injectable()
 export class AuthService {
@@ -18,8 +19,28 @@ export class AuthService {
     private config: ConfigService,
   ) {}
 
-  async login(dto: any) {
-    return { dto };
+  async login(dto: UserLoginDto) {
+    try {
+      const user = await this.prisma.users.findUnique({
+        where: { username: dto.username },
+        include: { role: true },
+      });
+
+      if (!user) throw new ForbiddenException('User Not Found!');
+
+      if (await argon.verify(user.password, dto.password)) {
+        const token = await this.signToken(
+          user.id,
+          user.username,
+          user.role.role_name,
+        );
+
+        return { user, token };
+      }
+      throw new BadRequestException('wrong password!');
+    } catch (error) {
+      throw error;
+    }
   }
 
   async addUser(dto: CreateUserDto) {
